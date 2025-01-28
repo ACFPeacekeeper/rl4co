@@ -33,6 +33,7 @@ def env_context_embedding(env_name: str, config: dict) -> nn.Module:
         "smtwtp": SMTWTPContext,
         "mdcpdp": MDCPDPContext,
         "mtvrp": MTVRPContext,
+        "wcrp": WCRPContext,
     }
 
     if env_name not in embedding_registry:
@@ -181,6 +182,20 @@ class SVRPContext(EnvContext):
 
     def __init__(self, embed_dim):
         super(SVRPContext, self).__init__(embed_dim=embed_dim, step_context_dim=embed_dim)
+
+    def forward(self, embeddings, td):
+        cur_node_embedding = self._cur_node_embedding(embeddings, td).squeeze()
+        return self.project_context(cur_node_embedding)
+    
+
+class WCRPContext(EnvContext):
+    """Context embedding for the Waste Collection Routing Problem (WCRP).
+    Project the following to the embedding space:
+        - current node embedding
+    """
+
+    def __init__(self, embed_dim):
+        super(WCRPContext, self).__init__(embed_dim, embed_dim)
 
     def forward(self, embeddings, td):
         cur_node_embedding = self._cur_node_embedding(embeddings, td).squeeze()

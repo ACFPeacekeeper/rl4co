@@ -37,6 +37,7 @@ def env_init_embedding(env_name: str, config: dict) -> nn.Module:
         "fjsp": FJSPInitEmbedding,
         "jssp": FJSPInitEmbedding,
         "mtvrp": MTVRPInitEmbedding,
+        "wcrp": WCRPInitEmbedding,
     }
 
     if env_name not in embedding_registry:
@@ -223,6 +224,35 @@ class OPInitEmbedding(nn.Module):
             torch.cat(
                 (
                     cities,
+                    td["prize"][..., 1:, None],  # exclude depot
+                ),
+                -1,
+            )
+        )
+        out = torch.cat((depot_embedding, node_embeddings), -2)
+        return out
+    
+
+class WCRPInitEmbedding(nn.Module):
+    """Initial embedding for the Waste Collection Routing Problem (WCRP).
+    Embed the following node features to the embedding space:
+        - locs: x, y coordinates of the nodes (depot and bins separately)
+        - prize: prize for visiting the bins
+    """
+
+    def __init__(self, embed_dim, linear_bias=True):
+        super(WCRPInitEmbedding, self).__init__()
+        node_dim = 3  # x, y, prize
+        self.init_embed = nn.Linear(node_dim, embed_dim, linear_bias)
+        self.init_embed_depot = nn.Linear(2, embed_dim, linear_bias)  # depot embedding
+
+    def forward(self, td):
+        depot, bins = td["locs"][:, :1, :], td["locs"][:, 1:, :]
+        depot_embedding = self.init_embed_depot(depot)
+        node_embeddings = self.init_embed(
+            torch.cat(
+                (
+                    bins,
                     td["prize"][..., 1:, None],  # exclude depot
                 ),
                 -1,
